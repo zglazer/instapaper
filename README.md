@@ -8,7 +8,7 @@ A simple implementation of the Instapaper API written in C. A library of functio
 available in instapaper.h and an example use of the library is written in a small 
 command line client in drop.c.
 
-http://instapaper.com
+http://www.instapaper.com
 
 Usage
 -----
