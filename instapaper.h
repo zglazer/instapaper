@@ -11,14 +11,15 @@
 #include <stdio.h>
 #include <curl/curl.h>
 #include <curl/easy.h>
-#include <pwd.h>
+#include <termios.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 
 char *uname = NULL; /* instapaper username */
 char *pass = NULL; /* instapaper password */
-CURL *curl_handler; /* URL handler */
+CURL *curl_handler = NULL; /* URL handler */
+int freeMem = 0; /* flag set if getCredentials() is called */
 
 /* PROTOTYPES */
 
@@ -35,7 +36,7 @@ size_t static write_function(void *buffer, size_t size, size_t nmemb, void *user
 /*
  * instapaper_init - function used to initialize instapaper library
  *
- * NOTE: must be called before using any authenticate() or drop() functions
+ * NOTE: must be called before using any other functions
  *
  */
 void instapaper_init() {
@@ -45,6 +46,9 @@ void instapaper_init() {
         fprintf(stderr, "Error establishing connection.\n");
         instapaper_clean();
     }
+    uname = NULL;
+    pass = NULL;
+    freeMem = 0;
 }
 
 /*
@@ -56,6 +60,10 @@ void instapaper_init() {
 void instapaper_clean() {
     curl_easy_cleanup(curl_handler);
     curl_global_cleanup();
+    if (freeMem) {
+        free(uname);
+        free(pass);
+    } 
 }
 
 /*
@@ -64,15 +72,32 @@ void instapaper_clean() {
  *
  */
 void getCredentials() {
+    freeMem = 1;
     uname = malloc(1024);
+    pass = malloc(1024);
     printf("Username: ");
     fgets(uname, 1024, stdin);
-    size_t ln = strlen(uname) - 1;
-    if (uname[ln] == '\n') {
-        uname[ln] = '\0';
+    uname[strlen(uname) - 1] = '\0';
+
+    struct termios oflags, nflags;
+    tcgetattr(fileno(stdin), &oflags);
+    nflags = oflags;
+    nflags.c_lflag &= ~ECHO;
+    nflags.c_lflag |= ECHONL;
+
+    if (tcsetattr(fileno(stdin), TCSANOW, &nflags) != 0) {
+        perror("tcsetattr");
+        return;
     }
 
-    pass = getpass("Password: "); 
+    printf("Password: ");
+    fgets(pass, 1024, stdin);
+    pass[strlen(pass) -1] = '\0';
+
+    if (tcsetattr(fileno(stdin), TCSANOW, &oflags) != 0) {
+        perror("tcsetattr");
+        return;
+    }
 }
 
 
@@ -125,7 +150,7 @@ int authenticate() {
     res = curl_easy_perform(curl_handler);
 
     curl_easy_getinfo(curl_handler, CURLINFO_RESPONSE_CODE, &httpCode);
-    
+    free(url);
     return (int) httpCode;
 }
 
@@ -177,7 +202,7 @@ int drop(char *url) {
     res = curl_easy_perform(curl_handler);
 
     curl_easy_getinfo(curl_handler, CURLINFO_RESPONSE_CODE, &httpCode);
-
+    free(dropURL);
     return (int) httpCode;
 }
 
