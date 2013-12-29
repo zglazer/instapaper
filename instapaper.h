@@ -115,7 +115,6 @@ int authenticate() {
     url = strcat(url, uname);   
     url = strcat(url, "&password=");
     url = strcat(url, pass);
-    url[strlen(url)] = '\0';
 
     curl_easy_reset(curl_handler);    
     curl_easy_setopt(curl_handler, CURLOPT_URL, url);
@@ -168,7 +167,6 @@ int drop(char *url) {
     dropURL = strcat(dropURL, pass);
     dropURL = strcat(dropURL, "&url=");
     dropURL = strcat(dropURL, url);
-    dropURL[strlen(dropURL)] = '\0';
 
     curl_easy_reset(curl_handler);
     curl_easy_setopt(curl_handler, CURLOPT_URL, dropURL);
